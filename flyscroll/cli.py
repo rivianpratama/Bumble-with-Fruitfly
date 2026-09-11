@@ -50,9 +50,9 @@ def main(argv=None):
     )
     p_serve.add_argument("--no-learning", action="store_true")
     p_serve.add_argument(
-        "--no-privacy",
+        "--privacy",
         action="store_true",
-        help="Show and log raw frames (faces and text are censored by default)",
+        help="Blur faces and text on the shown and logged frames (off by default)",
     )
     p_serve.add_argument(
         "--shorts",
@@ -170,8 +170,8 @@ def main(argv=None):
             serve_argv.extend(["--reels", args.reels])
         if args.no_learning:
             serve_argv.append("--no-learning")
-        if args.no_privacy:
-            serve_argv.append("--no-privacy")
+        if args.privacy:
+            serve_argv.append("--privacy")
         if args.shorts:
             serve_argv.append("--shorts")
             serve_argv.extend(["--platform", args.platform])

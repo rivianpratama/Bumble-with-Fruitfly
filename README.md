@@ -74,7 +74,7 @@ flyscroll serve --scale full --bumble --bumble-dry-run --bumble-max-swipes 10
 
 Open http://127.0.0.1:8767/ in a browser. You will see these things:
 
-- the phone screen that the fly looks at (faces and text are blurred for privacy),
+- the phone screen that the fly looks at (add `--privacy` to blur faces and text),
 - the fly in a small 3D room,
 - a green tick or a red cross when it swipes,
 - a list of profiles, with the average interest in Hz for each one.
@@ -111,10 +111,15 @@ watch the Hz numbers before you trust it.
 
 ## Privacy
 
-The app blurs faces and text on the screen you see, and in the saved images.
-Faces use a small model called YuNet. Text uses a model called PP-OCR. The fly
-brain still gets the real photo, because it needs the real pixels to work. Only
-the screen and the saved files are blurred.
+Privacy blur is off by default. Add the `--privacy` flag to turn it on. When it
+is on, the app blurs faces and text on the screen you see, and in the saved
+images. Faces use a small model called YuNet. Text uses a model called PP-OCR.
+The fly brain still gets the real photo, because it needs the real pixels to
+work. Only the screen and the saved files are blurred.
+
+```sh
+flyscroll serve --scale full --bumble --privacy
+```
 
 The app saves one photo per profile in `outputs/flyscroll/bumble/`. These are
 other people's photos. Keep this folder private. It stays on your computer. It

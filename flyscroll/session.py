@@ -48,7 +48,7 @@ class SessionConfig:
     peak_fraction: float = 0.40
     seed: int = 0
     shorts: bool = False
-    privacy: bool = True
+    privacy: bool = False
 
 
 class DoomscrollSession:

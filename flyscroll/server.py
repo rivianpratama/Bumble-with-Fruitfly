@@ -104,7 +104,7 @@ def run_loop(args):
         max_watch_seconds=max_watch,
         seed=args.seed,
         shorts=bool(getattr(args, "shorts", False)),
-        privacy=not getattr(args, "no_privacy", False),
+        privacy=getattr(args, "privacy", False),
         boredom_dwell_seconds=boredom,
         peak_fraction=getattr(args, "peak_fraction", 0.40),
     )
@@ -241,9 +241,9 @@ def main(argv=None):
     )
     parser.add_argument("--no-learning", action="store_true")
     parser.add_argument(
-        "--no-privacy",
+        "--privacy",
         action="store_true",
-        help="Show and log raw frames (faces and text are censored by default)",
+        help="Blur faces and text on the shown and logged frames (off by default)",
     )
     parser.add_argument(
         "--shorts",
