@@ -9,10 +9,10 @@ This is a fork of [Fruitfly-Doomscroller](https://github.com/ranagwho/Fruitfly-D
 by ranagwho. The base app makes a fly watch short videos. This fork adds the
 Bumble mode and some other features. See the Credits part at the end.
 
-![The fly watching a feed](docs/flyscroll-demo.gif)
+![Bumble with Fruitfly running](docs/bumblefly_demo.gif)
 
-Above: the fly watching a video feed. Bumble mode uses the same brain to swipe a
-real phone instead.
+Above: the app running. The fly watches the phone in the top left panel. The 3D
+fly in the middle shows the measured brain activity.
 
 ## How the fly decides
 
