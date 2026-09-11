@@ -85,21 +85,71 @@ When you are happy with it, run real swipes. Start with a small number.
 flyscroll serve --scale full --bumble --bumble-max-swipes 5
 ```
 
-## Main options
+## All options
 
-| Option | What it does |
-| --- | --- |
-| `--bumble-dry-run` | Decide and log, but do not swipe. |
-| `--bumble-max-swipes N` | Stop after N swipes. |
-| `--bumble-target-right-rate 0.25` | Try to like about 25% of profiles. |
-| `--bumble-like-threshold 20` | A fixed interest level to like, in Hz. |
-| `--bumble-max-profile-scrolls 3` | How many photos to scroll before deciding. |
-| `--bumble-decision-window 0.5` | Seconds of interest that the swipe uses. |
-| `--bumble-fps 3` | Screen photos per second. |
-| `--adb` / `--serial` | The adb path and the phone id. |
+You add these flags to `flyscroll serve`. The app can look at more than one
+photo in a profile. It swipes up to see the next photo, and then it decides.
 
-The app can look at more than one photo in a profile. It swipes up to see the
-next photo, and then it decides.
+### Bumble flags
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `--bumble` | off | Swipe a real Android phone over adb. |
+| `--bumble-dry-run` | off | Decide and log, but do not swipe. |
+| `--bumble-max-swipes N` | `0` (no limit) | Stop after N swipes. |
+| `--bumble-target-right-rate N` | `0.25` | Try to like about this share of profiles. `0` means use the fixed level. |
+| `--bumble-like-threshold N` | `20` | Fixed interest level to like, in Hz. Also the warm-up level for the first 8 profiles. |
+| `--bumble-decision-window N` | `0.5` | Seconds of recent interest the swipe reads. |
+| `--bumble-max-profile-scrolls N` | `3` | How many photos to scroll before it decides. |
+| `--bumble-max-watch N` | `5` | Longest time on one profile, in seconds. |
+| `--bumble-min-watch N` | `0.5` | Wait time before a swipe, in seconds. |
+| `--bumble-fps N` | `3` | Screen photos per second. |
+| `--bumble-247` | off | Human-like timing, with a 2 to 3 minute break once an hour. |
+| `--bumble-left-swipe "x1,y1,x2,y2,ms"` | from screen size | Set the left (pass) swipe by hand. |
+| `--bumble-right-swipe "x1,y1,x2,y2,ms"` | from screen size | Set the right (like) swipe by hand. |
+| `--bumble-up-swipe "x1,y1,x2,y2,ms"` | from screen size | Set the up (next photo) swipe by hand. |
+| `--adb PATH` | `adb` | Path to the adb program. |
+| `--serial ID` | first device | Which phone to use, by its adb id. |
+
+### General flags
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `--scale full\|visual` | `visual` | Which brain to load. `full` is all neurons. `visual` is a smaller crop. |
+| `--port N` | `8767` | The web page port. |
+| `--seed N` | `0` | Random seed. |
+| `--frame-ms N` | `50` | Neural time per frame, in ms. |
+| `--threshold N` | `14` | Interest floor for boredom. |
+| `--min-watch N` | `0.35` | Shortest watch time before a scroll, in seconds. |
+| `--max-watch N` | `5` | Longest watch time before a scroll, in seconds. |
+| `--boredom-dwell N` | `1.6` | Seconds of low novelty before the fly gets bored. |
+| `--peak-fraction N` | `0.40` | Bored when novelty drops below this share of the peak. |
+| `--no-learning` | off | Turn off synapse learning. |
+| `--privacy` | off | Blur faces and text on the shown and saved frames. |
+
+Bumble mode uses `--bumble-min-watch` and `--bumble-max-watch` in place of the
+general `--min-watch` and `--max-watch`.
+
+### Video feed flags
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `--reels DIR` | none | Folder of MP4 or WebM files to watch. |
+| `--n-reels N` | `8` | How many made-up clips to build when there are no files. |
+| `--shorts` | off | Watch a live web feed in a browser. |
+| `--platform youtube\|tiktok\|instagram` | `youtube` | Which feed to open with `--shorts`. |
+| `--shorts-url URL` | none | Start the feed at a different URL. |
+| `--shorts-headless` | off | Hide the browser window. |
+
+### Setup commands
+
+You build the brain once before you serve.
+
+| Command | Flags | Default | What it does |
+| --- | --- | --- | --- |
+| `flyscroll import [dataset]` | dataset name | `malecns_v1` | Read the MaleCNS files. |
+| `flyscroll prepare [dataset]` | `--scale full\|visual` | `full` | Build the graph. |
+| `flyscroll demo` | `--scale`, `--steps`, `--seed` | `visual`, `40`, `0` | Quick test with no browser. |
 
 ## How the like level is set
 
