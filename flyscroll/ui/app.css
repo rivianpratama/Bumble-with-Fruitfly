@@ -1,0 +1,724 @@
+:root {
+  --bg0: #05070a;
+  --bg1: #0c1210;
+  --ink: #e8f2ea;
+  --muted: #8fa396;
+  --accent: #c6f355;
+  --warn: #ff6b4a;
+  --line: rgba(232, 242, 234, 0.12);
+  --font-display: "IBM Plex Serif", "Source Serif 4", Georgia, serif;
+  --font-body: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow: hidden;
+  background:
+    radial-gradient(1000px 600px at 8% -8%, #15241c 0%, transparent 55%),
+    radial-gradient(800px 500px at 100% 0%, #1a1210 0%, transparent 50%),
+    linear-gradient(160deg, var(--bg0), var(--bg1));
+}
+
+/* One viewport, no page scroll: a fixed dashboard grid. Every cell clips its
+   own overflow; only the watched-reels log scrolls internally. */
+.stage { height: 100%; padding: 0.55rem; }
+.layout {
+  display: grid;
+  height: 100%;
+  gap: 0.6rem;
+  grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.95fr) minmax(0, 1fr) minmax(280px, 0.72fr);
+  grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-areas:
+    "seen  chamber   chamber  telemetry"
+    "brain analytics charts   telemetry";
+}
+.layout > * { min-height: 0; min-width: 0; }
+.chamber { grid-area: chamber; }
+.brain { grid-area: brain; }
+.telemetry { grid-area: telemetry; }
+.left-analytics { grid-area: analytics; }
+
+/* --- "What the fly saw" panel: the exact frame handed to the retina ------------- */
+.phone {
+  grid-area: seen;
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #050705;
+  border: 1px solid var(--line);
+}
+.phone #frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #050705;
+}
+.phone-head {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 2;
+  padding: 0.4rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+.phone-meta {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  padding: 0.5rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--muted);
+  background: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
+.phone-meta #reel-title { color: var(--text, #e8efe6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phone-meta #reel-sub { opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#privacy-badge { opacity: 0.7; font-size: 0.6rem; letter-spacing: 0.06em; }
+/* Bumble swipe verdict: a ✓ (agree / like) or ✕ (disagree / pass) zooms over the
+   fly's view each time the fly commits a swipe. No dark overlay behind it. */
+.swipe-verdict {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.swipe-verdict .mark {
+  font: 700 clamp(4rem, 22vh, 9rem) / 1 var(--font-body);
+  opacity: 0;
+  transform: scale(0.2);
+}
+.swipe-verdict.like .mark { color: var(--accent); text-shadow: 0 0 26px rgba(198, 243, 85, 0.75); }
+.swipe-verdict.pass .mark { color: var(--warn); text-shadow: 0 0 26px rgba(255, 107, 74, 0.75); }
+.swipe-verdict.show .mark { animation: swipe-verdict-zoom 820ms cubic-bezier(0.18, 1.5, 0.3, 1) forwards; }
+@keyframes swipe-verdict-zoom {
+  0%   { opacity: 0; transform: scale(0.2); }
+  22%  { opacity: 1; transform: scale(1.2); }
+  55%  { opacity: 1; transform: scale(0.98); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .swipe-verdict.show .mark { animation-duration: 1ms; }
+}
+
+/* --- Observation chamber: 3D scene adapted from fly-wirehead (see THIRD_PARTY.md) --- */
+.chamber {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  touch-action: none;
+}
+.chamber:fullscreen { height: 100%; width: 100%; }
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  outline-offset: -5px;
+}
+#scene:active { cursor: grabbing; }
+#scene:focus-visible { outline: 2px solid var(--accent); }
+.scene-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 22%, transparent 85%, rgba(0, 0, 0, 0.05));
+}
+.scene-heading {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  z-index: 2;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+}
+.brain-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  color: #33413b;
+}
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(198, 243, 85, 0.35);
+}
+.disconnected .live-dot { background: #ae9680; box-shadow: none; }
+.scene-heading p { margin: 5px 0 0; color: #5a6a62; font-size: 0.74rem; }
+.session-stamp {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
+  display: grid;
+  gap: 3px;
+  text-align: right;
+  pointer-events: none;
+}
+.session-stamp > span {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  color: #5a6a62;
+}
+.session-stamp strong {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: #33413b;
+}
+.scene-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 12px;
+  z-index: 2;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: #33413b;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+}
+.scene-error {
+  position: absolute;
+  inset: 22% 12% auto;
+  z-index: 4;
+  padding: 1.2rem;
+  text-align: center;
+  background: rgba(13, 25, 25, 0.93);
+  border: 1px solid #54705b;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.neural-overlay {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 2;
+  width: min(440px, 50%);
+  padding: 0.55rem 0.85rem 0.5rem;
+  border: 1px solid rgba(89, 117, 106, 0.41);
+  background: linear-gradient(120deg, rgba(7, 16, 19, 0.93), rgba(12, 23, 26, 0.85));
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+.overlay-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  color: #c3d4c8;
+}
+.neural-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  margin: 0.35rem 0;
+}
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.metric-number {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  line-height: 1.05;
+  margin-top: 2px;
+}
+.metric-number strong {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.4rem, 2vw, 2.1rem);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.metric-number > span { font-size: 0.8rem; color: #bed39f; }
+.neural-metrics > div:last-child .metric-number strong { color: var(--ink); font-size: clamp(1.2rem, 1.7vw, 1.6rem); }
+.sample-label {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.68rem;
+  color: #abc0b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plot-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: #9cb4a6;
+}
+.plot canvas { display: block; width: 100%; height: 56px; }
+.swatch.pam11 { background: #ffb74a; }
+.overlay-foot {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  line-height: 1.4;
+  color: #8fa396;
+}
+.overlay-foot strong { color: #ffb74a; font-weight: 500; }
+
+/* --- Neon wiring plate ------------------------------------------------------- */
+.brain {
+  position: relative;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(40, 20, 60, 0.35), transparent 55%),
+    #000;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255, 80, 200, 0.06),
+    0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.brain canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.brain canvas:active { cursor: grabbing; }
+.brain-meta {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--muted);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  pointer-events: none;
+}
+.brain-meta .hint { opacity: 0.7; }
+.spin-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  pointer-events: auto;  /* the row is pointer-events:none; the slider opts back in */
+  white-space: nowrap;
+}
+.spin-control > span:first-child { opacity: 0.7; }
+#spin-readout { opacity: 0.7; font-variant-numeric: tabular-nums; min-width: 3.4em; text-align: right; }
+#spin-speed {
+  width: 96px;
+  height: 3px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+/* --- Telemetry column ---------------------------------------------------------- */
+.telemetry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  overflow: hidden;
+}
+.telemetry h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.05rem;
+  margin: 0;
+}
+.meter {
+  flex: none;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+#interest-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--warn), var(--accent));
+  transition: width 180ms linear;
+}
+.scroll-error {
+  flex: none;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(255, 107, 74, 0.45);
+  color: var(--warn);
+  background: rgba(255, 107, 74, 0.08);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.fly-eye-panel {
+  flex: 1.15 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(61, 126, 103, 0.12), transparent 64%),
+    rgba(0, 0, 0, 0.34);
+  padding: 0.45rem 0.55rem 0.5rem;
+}
+#fly-eye {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #020504;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.eye-features {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+.eye-feature {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.eye-feature-track {
+  display: block;
+  height: 3px;
+  margin-top: 0.15rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+}
+.eye-feature-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3cb9ff, var(--accent));
+  box-shadow: 0 0 5px rgba(198, 243, 85, 0.5);
+}
+
+.charts {
+  grid-area: charts;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  background: rgba(4, 8, 7, 0.94);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.68);
+  overflow: hidden;
+}
+.chart-block {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0.45rem 0.55rem 0.35rem;
+}
+.charts .chart-block:first-child { flex: 1.7 1 0; }
+.charts .chart-block:last-child { flex: 1 1 0; }
+.chart-head {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.chart-head strong {
+  color: var(--accent);
+  font-size: 0.78rem;
+}
+.chart-legend { display: inline-flex; gap: 0.45rem; align-items: center; }
+.swatch {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.18rem;
+  vertical-align: -0.05rem;
+}
+.swatch.interest { background: var(--accent); }
+.swatch.novelty { background: #6ec8ff; }
+.swatch.skip { background: var(--warn); }
+.chart-block canvas {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.stats {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.8rem;
+  margin: 0;
+}
+.stats div {
+  border-top: 1px solid var(--line);
+  padding-top: 0.3rem;
+  min-width: 0;
+}
+.stats dt {
+  color: var(--muted);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.stats dd {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Bumble swipe panel -------------------------------------------------------- */
+/* flex: none, like .stats above it: the telemetry column is a fixed-height flex
+   column, so the panel must take only its content and leave the single-screen
+   (100vh, no page scroll) layout intact. */
+.bumble-panel {
+  flex: none;
+  margin: 0;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0.45rem 0.55rem 0.5rem;
+}
+.bumble-rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+.bumble-rows span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bumble-rows b { color: var(--ink); font-weight: 500; }
+.bumble-badge {
+  margin-top: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  color: var(--warn);
+}
+.bumble-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--accent);
+  margin-left: 0.3rem;
+}
+
+/* --- Watched reels + outcomes -------------------------------------------------- */
+.left-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  background: rgba(4, 8, 7, 0.94);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.68);
+  overflow: hidden;
+}
+.reel-log {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.reel-log h2 {
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin: 0 0 0.45rem;
+  font-size: 1.05rem;
+}
+.reel-cards {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.2rem;
+  scrollbar-width: thin;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+  align-content: start;
+}
+.reel-card {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  gap: 0.5rem;
+  align-items: center;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.4rem 0.45rem;
+}
+.reel-card-enter {
+  animation: reel-card-enter 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes reel-card-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.985);
+    border-color: rgba(198, 243, 85, 0.5);
+    background: rgba(198, 243, 85, 0.09);
+  }
+  65% {
+    opacity: 1;
+    border-color: rgba(198, 243, 85, 0.28);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+.reel-hero {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--accent);
+  text-align: center;
+}
+.reel-hero small {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+}
+.reel-card-meta {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reel-card-meta strong { color: var(--ink); font-weight: 500; }
+.reel-card canvas {
+  width: 100%;
+  height: 38px;
+  display: block;
+}
+.outcome-chart { flex: none; padding-bottom: 0.55rem; }
+.outcome-row {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(3rem, 1fr) 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--muted);
+}
+.outcome-row > strong {
+  color: var(--ink);
+  text-align: right;
+}
+.outcome-track {
+  height: 9px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+.outcome-track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  transition: width 180ms linear;
+}
+#outcome-bored-bar { background: var(--warn); }
+#outcome-full-bar { background: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reel-card-enter { animation: none; }
+}
+
+/* Narrow screens cannot hold the dashboard in one view; fall back to a
+   scrolling single column with fixed panel heights. */
+@media (max-width: 980px) {
+  html, body { height: auto; overflow: auto; }
+  .stage { height: auto; }
+  .layout {
+    height: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-template-areas:
+      "seen"
+      "chamber"
+      "telemetry"
+      "brain"
+      "analytics"
+      "charts";
+  }
+  .chamber { height: 62vh; }
+  .phone { height: 58vh; }
+  .brain { height: 60vh; }
+  .telemetry, .left-analytics, .charts { height: auto; }
+  #fly-eye { flex: none; height: 210px; }
+  .chart-block canvas { flex: none; height: 150px; }
+  .charts .chart-block:last-child canvas { height: 90px; }
+  .reel-cards { max-height: 420px; }
+  .neural-overlay { width: calc(100% - 28px); }
+}
+@media (max-width: 700px) {
+  .eye-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

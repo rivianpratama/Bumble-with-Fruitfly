@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlyScroll</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/app.css" />
+  <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+</head>
+<body>
+  <div class="stage">
+    <main class="layout" id="layout">
+      <section class="chamber" id="chamber" aria-label="Fly observation chamber">
+        <canvas id="scene" tabindex="0"
+          aria-label="A fruit fly watching a phone. Drag to orbit. C changes camera; F toggles fullscreen."></canvas>
+        <div class="scene-shade" aria-hidden="true"></div>
+        <div class="scene-heading">
+          <div class="brain-status"><span class="live-dot"></span><span id="top-state">BRAIN CONNECTING</span></div>
+          <p id="model-detail">Loading the MaleCNS graph…</p>
+        </div>
+        <div class="session-stamp"><span>EXPOSURE</span><strong id="session-time">00:00:00</strong></div>
+        <div class="scene-error" id="scene-error" role="alert" hidden>
+          Your browser couldn’t start the 3D scene. Try a browser with WebGL 2 enabled.
+        </div>
+        <aside class="neural-overlay" aria-label="Measured neural activity">
+          <div class="overlay-heading"><span>LIVE NEURAL ACTIVITY</span><span class="live-dot"></span></div>
+          <div class="neural-metrics">
+            <div>
+              <span class="metric-label">INTEREST</span>
+              <div class="metric-number"><strong id="hero-interest">—</strong><span>Hz</span></div>
+              <span class="sample-label" id="hero-interest-sub">tonic novelty · the fly scrolls when it fades</span>
+            </div>
+            <div>
+              <span class="metric-label">FLY SPIKES</span>
+              <div class="metric-number"><strong id="spike-value">—</strong></div>
+              <span class="sample-label" id="sample-label">Waiting for a sample</span>
+            </div>
+          </div>
+          <div class="plot">
+            <div class="plot-label">
+              <span><i class="swatch interest"></i>interest <i class="swatch novelty"></i>phasic novelty <i class="swatch pam11"></i>PAM11</span>
+              <span id="chart-range">WAITING FOR DATA</span>
+            </div>
+            <canvas id="hero-chart" role="img"
+              aria-label="Interest, phasic novelty and PAM11 firing over neural time; automatically scaled"></canvas>
+          </div>
+          <div class="overlay-foot">
+            Movement is mapped from measured interest, novelty and DNa02 / MN9 / DNp09 rates.
+            PAM11 dopamine <strong id="hero-pam11">—</strong> Hz across <span id="hero-pam11-cells">15</span> cells (no reward current is injected).
+          </div>
+        </aside>
+        <div class="scene-hint">drag to orbit · C camera · F fullscreen</div>
+      </section>
+
+      <!-- The exact frame handed to the fly's retina (privacy-filtered for display). -->
+      <section class="phone" id="phone" aria-label="What the fly saw">
+        <div class="phone-head">Fly's view</div>
+        <img id="frame" alt="The frame currently shown to the fly" />
+        <div class="phone-meta">
+          <div id="reel-title">booting…</div>
+          <div id="reel-sub"></div>
+          <span id="privacy-badge"></span>
+        </div>
+        <div id="swipe-verdict" class="swipe-verdict" aria-hidden="true"><span class="mark"></span></div>
+      </section>
+
+      <section class="brain" aria-label="CNS activation cloud">
+        <canvas id="cloud"></canvas>
+        <div class="brain-meta">
+          <span id="cloud-label">loading anatomy…</span>
+          <label class="spin-control" title="Wiring-plate rotation speed (turns per minute; 0 = stopped)">
+            <span>spin</span>
+            <input id="spin-speed" type="range" min="0" max="20" step="0.5" value="3" aria-label="Wiring-plate rotation speed in turns per minute" />
+            <span id="spin-readout">3.0/min</span>
+          </label>
+        </div>
+      </section>
+
+      <aside class="telemetry" id="telemetry">
+        <h2>Interest</h2>
+        <div class="meter"><div id="interest-bar"></div></div>
+        <div class="scroll-error" id="scroll-error" hidden></div>
+
+        <section class="fly-eye-panel" id="fly-eye-panel">
+          <div class="chart-head">
+            <span>Ommatidial Column</span>
+          </div>
+          <canvas id="fly-eye" width="560" height="250"></canvas>
+          <div class="eye-features" id="eye-features"></div>
+        </section>
+
+        <dl class="stats">
+          <div><dt>Interest</dt><dd id="interest">—</dd></div>
+          <div><dt>Population novelty</dt><dd id="phasic">—</dd></div>
+          <div><dt>Low-novelty dwell</dt><dd id="dwell">—</dd></div>
+          <div><dt>Active cells</dt><dd id="active">—</dd></div>
+          <div id="watch-dist-stat"><dt>Watch p50</dt><dd id="watch-dist-v">—</dd></div>
+        </dl>
+
+        <section class="bumble-panel" id="bumble-panel" hidden>
+          <div class="chart-head">
+            <span>Bumble swipes</span>
+            <strong id="bumble-decision">—</strong>
+          </div>
+          <div class="bumble-rows">
+            <span>mean / threshold <b id="bumble-mean">—</b></span>
+            <span>likes · passes · swipes <b id="bumble-counts">—</b></span>
+            <span>photo <b id="bumble-photo">—</b></span>
+            <span id="bumble-device">device ok</span>
+          </div>
+          <div class="bumble-badge" id="bumble-dry" hidden>DRY RUN · no swipes sent</div>
+        </section>
+
+      </aside>
+
+      <aside class="left-analytics" id="left-analytics">
+        <section class="reel-log" id="reel-log">
+          <h2>Watched content</h2>
+          <div id="reel-cards" class="reel-cards"></div>
+        </section>
+        <section class="chart-block outcome-chart">
+          <div class="chart-head">
+            <span>Watch outcomes</span>
+            <strong id="outcome-total">0 content</strong>
+          </div>
+          <div class="outcome-row">
+            <span>Bored</span>
+            <div class="outcome-track"><i id="outcome-bored-bar"></i></div>
+            <strong id="outcome-bored">0</strong>
+          </div>
+          <div class="outcome-row">
+            <span>Full watch</span>
+            <div class="outcome-track"><i id="outcome-full-bar"></i></div>
+            <strong id="outcome-full">0</strong>
+          </div>
+        </section>
+      </aside>
+
+        <div class="charts" id="charts">
+          <div class="chart-block">
+            <div class="chart-head">
+              <span>Interest + novelty · entire session</span>
+              <span class="chart-legend"><i class="swatch interest"></i>interest <i class="swatch novelty"></i>novelty <i class="swatch skip"></i>skip</span>
+            </div>
+            <canvas id="chart-interest" width="560" height="180"></canvas>
+          </div>
+          <div class="chart-block">
+            <div class="chart-head">
+              <span>Avg watch length</span>
+              <strong id="avg-watch">—</strong>
+            </div>
+            <canvas id="chart-avg" width="560" height="96"></canvas>
+          </div>
+        </div>
+    </main>
+  </div>
+  <script src="/cloud.js"></script>
+  <script src="/app.js"></script>
+  <script type="module" src="/chamber.js"></script>
+</body>
+</html>
